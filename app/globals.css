@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fdfbf7;
+}
+
+@theme {
+  --font-inter: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-playfair: var(--font-playfair), ui-serif, Georgia, serif;
+
+  /* Typography */
+  --font-inter: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-playfair: var(--font-playfair), ui-serif, Georgia, serif;
+
+  /* Surfaces */
+  --color-body: #fdfbf7;
+  --color-card: #f7f1e9;
+  --color-section: #dfbfba;
+  --color-section-2: #fcf2eb;
+  --color-border: #e5ded5;
+  --color-footer: #f6ece5;
+
+  /* Text Hierarchy */
+  --color-heading: #1a1612;
+  --color-body-text: #4a443f;
+  --color-muted-text: #8c847c;
+
+  /* Brand Colors */
+  --color-primary: #b33f30; /* CTA buttons, active links */
+  --color-primary-hover: #8b2f23; /* Hover state */
+  --color-secondary: #d9a05b; /* Badges, stars, accents */
+  --color-tertiary: #5b6d5b; /* Success states, stock labels */
+
+  /* Semantic Colors */
+  --color-error: #d84315; /* Out of stock, form errors */
+  --color-warning: #f57c00; /* Low stock warnings */
+  --color-success: #5b6d5b;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-playfair;
+  }
+
+  body {
+    @apply font-inter;
+    background-color: #fdfbf7;
+    /* background-color: #FFF8F4; */
+  }
+  body::selection {
+    background-color: var(--color-secondary);
+    color: var(--color-body);
+  }
+}
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+/* OR the pure Tailwind v4 way: */
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
