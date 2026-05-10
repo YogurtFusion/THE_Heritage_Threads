@@ -246,9 +246,13 @@ export async function createOrder(data: {
   }
   const Order = (await import("@/models/Order")).default;
   return Order.create({
-    userId: data.userId, items: data.items, totalAmount: data.totalAmount,
-    shippingAddress: data.shippingAddress, paymentId: data.paymentId ?? null,
-    paymentStatus: data.paymentStatus ?? "pending", status: "pending",
+    userId: data.userId,
+    items: data.items,
+    totalAmount: data.totalAmount,
+    shippingAddress: data.shippingAddress,
+    paymentId: data.paymentId ?? null,
+    paymentStatus: (data.paymentStatus ?? "pending") as "pending" | "paid" | "failed" | "refunded",
+    status: "pending" as const,
   });
 }
 
@@ -298,8 +302,15 @@ export async function verifyOrderPayment(id: string, action: "verify" | "decline
   const Order = (await import("@/models/Order")).default;
   const order = await Order.findById(id);
   if (!order) return null;
-  if (action === "verify") { order.paymentStatus = "paid"; order.status = "processing"; }
-  else { order.paymentStatus = "pending"; (order as Record<string, unknown>).paymentMethod = "cod"; order.paymentScreenshot = undefined; order.status = "pending"; }
+  if (action === "verify") {
+    order.paymentStatus = "paid";
+    order.status = "processing";
+  } else {
+    order.paymentStatus = "pending";
+    order.paymentMethod = "cod" as "cod" | "online" | "qr";
+    order.paymentScreenshot = undefined;
+    order.status = "pending";
+  }
   await order.save();
   return order;
 }
@@ -363,7 +374,12 @@ export async function createUser(data: { name: string; email: string; password: 
     return { _id: id, name: data.name, email: data.email, role: data.role ?? "user" };
   }
   const User = (await import("@/models/User")).default;
-  return User.create(data);
+  return User.create({
+    name: data.name,
+    email: data.email,
+    password: data.password,
+    role: (data.role ?? "user") as "admin" | "user",
+  });
 }
 
 export async function updateUserProfile(userId: string, name: string) {
@@ -455,7 +471,13 @@ export async function createNotificationRecord(data: {
     return true;
   }
   const Notification = (await import("@/models/Notification")).default;
-  await Notification.create(data);
+  await Notification.create({
+    type: data.type as "new_order" | "order_updated" | "new_contact" | "low_stock" | "new_user" | "payment_receipt",
+    title: data.title,
+    message: data.message,
+    link: data.link,
+    data: data.data,
+  });
   return true;
 }
 
