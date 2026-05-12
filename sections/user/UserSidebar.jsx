@@ -27,7 +27,7 @@ export const UserSidebar = () => {
             }`}
           >
             {item.label}
-            {tab === item.id && <span className="text-lg leading-none">→</span>}
+            {/* {tab === item.id && <span className="text-lg leading-none">→</span>} */}
           </button>
         ))}
         <button
