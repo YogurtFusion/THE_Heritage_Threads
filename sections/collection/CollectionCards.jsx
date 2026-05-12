@@ -22,7 +22,7 @@ export const CollectionCards = ({ _id, id, img, images, title, name, price, inde
   };
 
   return (
-    <article className="group flex flex-col">
+    <article className="group flex flex-col h-full">
       <Link
         href={isApiProduct ? `/product/${productId}` : "/preview"}
         onMouseEnter={() => setHovered(true)}
