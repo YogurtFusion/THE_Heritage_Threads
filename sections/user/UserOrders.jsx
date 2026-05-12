@@ -50,7 +50,7 @@ export default function UserOrders() {
         <div className="text-4xl mb-4">🛍️</div>
         <p className="text-lg mb-4">No orders yet</p>
         <Link href="/collection" className="text-primary hover:text-primary-hover font-medium transition-colors">
-          Start shopping →
+          Start shopping
         </Link>
       </div>
     );
