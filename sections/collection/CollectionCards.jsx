@@ -62,7 +62,7 @@ export const CollectionCards = ({ _id, id, img, images, title, name, price, inde
           {!mainImage && <div className="w-full h-full bg-section" />}
         </div>
       </Link>
-      <h3 className="font-playfair text-xl text-heading mb-1">{displayTitle}</h3>
+      <h3 className="font-inter text-xl text-heading mb-1">{displayTitle}</h3>
       <p className="text-sm text-muted-text mb-4">₹{price}</p>
       <AddCartBtn product={product} />
     </article>
