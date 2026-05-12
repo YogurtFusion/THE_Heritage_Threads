@@ -81,7 +81,7 @@ const TopNav = () => {
         {/* Right Icons */}
         <div className=" flex justify-end items-center gap-1 ">
             <div className={`flex justify-start items-center transition-all duration-500 ease-in-out h-9  ${isOpen ? " border border-border  rounded-full px-2  bg-body" : "border-transparent px-0"} `}>
-              <button className="p-2 hover:opacity-70 transition-opacity rounded-full text-secondary hover:bg-border/30"
+              <button className={`p-2 hover:opacity-70 transition-opacity rounded-full text-secondary hover:bg-border/30 ${isOpen ? "hidden" : ""}`}
                 aria-label="Open search" onClick={() => setIsOpen(true)}>
                 <SearchIcon />
               </button>
