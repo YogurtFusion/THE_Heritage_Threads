@@ -4,7 +4,16 @@ import AddCartBtn from "@/components/ui/AddCartBtn";
 import Image from "next/image";
 import Link from "next/link";
 
-export const CollectionCards = ({ _id, id, img, images, title, name, price, index }) => {
+export const CollectionCards = ({
+  _id,
+  id,
+  img,
+  images,
+  title,
+  name,
+  price,
+  index,
+}) => {
   const productId = _id ?? id;
   const displayTitle = title ?? name ?? "";
   const isApiProduct = !!_id;
@@ -30,8 +39,8 @@ export const CollectionCards = ({ _id, id, img, images, title, name, price, inde
       >
         <div className="relative aspect-4/5 bg-[#1C2628] mb-5 overflow-hidden">
           {/* Main image */}
-          {mainImage && (
-            img ? (
+          {mainImage &&
+            (img ? (
               <Image
                 src={img}
                 alt={displayTitle}
@@ -46,8 +55,7 @@ export const CollectionCards = ({ _id, id, img, images, title, name, price, inde
                 alt={displayTitle}
                 className={`w-full h-full object-cover transition-all duration-700 ease-out absolute inset-0 ${hovered && hoverImage ? "opacity-0 scale-105" : "opacity-90 scale-100"}`}
               />
-            )
-          )}
+            ))}
 
           {/* Hover image (second image) */}
           {hoverImage && (
@@ -62,9 +70,15 @@ export const CollectionCards = ({ _id, id, img, images, title, name, price, inde
           {!mainImage && <div className="w-full h-full bg-section" />}
         </div>
       </Link>
-      <h3 className="font-inter text-base font-bold  text-heading mb-1 line-clamp-2">{displayTitle}</h3>
-      <p className="text-sm text-muted-text mb-4">₹{price}</p>
-      <AddCartBtn product={product} />
+      <div className=" flex flex-col grow">
+        <h3 className="font-inter text-base font-bold  text-heading mb-1 line-clamp-2">
+          {displayTitle}
+        </h3>
+        <div className="mt-auto">
+          <p className="text-sm text-heading mb-4">₹{price}</p>
+        </div>
+        <AddCartBtn product={product} />
+      </div>
     </article>
   );
 };
