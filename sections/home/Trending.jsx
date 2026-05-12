@@ -12,8 +12,8 @@ const Trending = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [canScrollLeft, setCanScrollLeft] = useState(0);
-  const [canScrollRight, seCanScrollRight] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   useEffect(() => {
     fetch("/api/products?trending=true&limit=9")
@@ -54,7 +54,7 @@ const Trending = () => {
       setScrollProgress(progress);
 
       setCanScrollLeft(scrollLeft>0)
-      seCanScrollRight(Math.ceil(scrollLeft)<Math.floor(maxScroll))
+      setCanScrollRight(Math.ceil(scrollLeft)<Math.floor(maxScroll))
     }
   };
 
@@ -82,13 +82,13 @@ const Trending = () => {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex gap-8 overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 lg:px-12 scroll-px-6 lg:scroll-px-12"
+          className="flex gap-8 overflow-x-auto overflow-y-hidden snap-x snap-mandatory no-scrollbar px-6 lg:px-12 scroll-px-6 lg:scroll-px-12"
         >
           {items.map((item, index) => (
             <motion.div
               key={item._id ?? item.id}
               className="min-w-[80vw] md:min-w-[40vw] lg:min-w-[25vw]"
-              initial={{ opacity: 0, y: 50 }}
+              initial={{ opacity: 0, y: 5 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{
