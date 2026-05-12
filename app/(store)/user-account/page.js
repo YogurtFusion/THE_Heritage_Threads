@@ -16,7 +16,6 @@ export default function AccountProfile() {
               className="flex justify-between items-center text-primary font-bold tracking-wider text-sm border-b border-primary pb-2"
             >
               Profile
-              <span className="text-lg leading-none">→</span>
             </a>
             <a 
               href="#" 
