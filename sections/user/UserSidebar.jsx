@@ -13,7 +13,7 @@ export const UserSidebar = () => {
   ];
 
   return (
-    <aside className="md:w-full  md:shrink-0">
+    <aside className="w-full md:w-fit   shrink-0">
       <h1 className="font-playfair text-3xl text-heading mb-10">My Account</h1>
       <nav className="flex flex-col space-y-6">
         {navItems.map((item) => (
