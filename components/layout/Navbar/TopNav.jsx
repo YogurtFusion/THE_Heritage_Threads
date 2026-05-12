@@ -17,7 +17,7 @@ const TopNav = () => {
   const router = useRouter();
   const nav = [
     { id: "id1", title: "Home", href: "/" },
-    { id: "id2", title: "Products", href: "/collection" },
+    { id: "id2", title: "Collections", href: "/collection" },
     { id: "id4", title: "About US", href: "/about" },
     { id: "id3", title: "Contact US", href: "/contact" },
   ];
