@@ -142,6 +142,17 @@ CREATE TABLE IF NOT EXISTS settings (
   privacy_policy TEXT DEFAULT '',
   terms_conditions TEXT DEFAULT '',
   about_text TEXT DEFAULT '',
+  media_storage TEXT DEFAULT 'local',
+  backblaze_bucket_name TEXT,
+  backblaze_region TEXT,
+  backblaze_access_key_id TEXT,
+  backblaze_secret_key TEXT,
+  backblaze_public_url TEXT,
+  r2_bucket_name TEXT,
+  r2_access_key_id TEXT,
+  r2_secret_access_key TEXT,
+  r2_endpoint TEXT,
+  r2_public_url TEXT,
   setup_complete INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -182,6 +193,16 @@ async function connectSQLite(): Promise<void> {
 // ─── MySQL ────────────────────────────────────────────────────────────────────
 let mysqlPool: import("mysql2/promise").Pool | null = null;
 
+const MYSQL_SCHEMA = [
+  `CREATE TABLE IF NOT EXISTS users (id VARCHAR(36) PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, role ENUM('admin','user') DEFAULT 'user', avatar TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS products (id VARCHAR(36) PRIMARY KEY, name VARCHAR(255) NOT NULL, slug VARCHAR(255) UNIQUE NOT NULL, description TEXT, price DECIMAL(10,2) NOT NULL, discount_price DECIMAL(10,2), images JSON, category VARCHAR(100) NOT NULL, stock INT DEFAULT 0, is_featured TINYINT(1) DEFAULT 0, is_trending TINYINT(1) DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS orders (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL, items JSON NOT NULL, total_amount DECIMAL(10,2) NOT NULL, status VARCHAR(50) DEFAULT 'pending', payment_id VARCHAR(255), payment_status VARCHAR(50) DEFAULT 'pending', payment_method VARCHAR(50) DEFAULT 'cod', payment_screenshot TEXT, shipping_address JSON NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS contacts (id VARCHAR(36) PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL, message TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS settings (id VARCHAR(36) PRIMARY KEY, site_name VARCHAR(255) DEFAULT 'My Store', logo TEXT, banner TEXT, favicon TEXT, currency VARCHAR(10) DEFAULT 'INR', contact_email VARCHAR(255) DEFAULT '', contact_phone VARCHAR(50) DEFAULT '', contact_address TEXT DEFAULT '', social_links JSON, instamojo_api_key TEXT, instamojo_auth_token TEXT, instamojo_salt TEXT, cashfree_app_id TEXT, cashfree_secret_key TEXT, cashfree_env VARCHAR(20) DEFAULT 'sandbox', qr_enabled TINYINT(1) DEFAULT 0, qr_recipient_name VARCHAR(255) DEFAULT '', qr_upi_id VARCHAR(255) DEFAULT '', qr_image TEXT, cod_enabled TINYINT(1) DEFAULT 1, online_payment_enabled TINYINT(1) DEFAULT 0, payment_gateway VARCHAR(50) DEFAULT 'instamojo', free_shipping_above DECIMAL(10,2) DEFAULT 500, shipping_charge DECIMAL(10,2) DEFAULT 50, return_policy TEXT DEFAULT '', privacy_policy TEXT DEFAULT '', terms_conditions TEXT DEFAULT '', about_text TEXT DEFAULT '', media_storage VARCHAR(20) DEFAULT 'local', setup_complete TINYINT(1) DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS notifications (id VARCHAR(36) PRIMARY KEY, type VARCHAR(50) NOT NULL, title VARCHAR(255) NOT NULL, message TEXT NOT NULL, link VARCHAR(500), read_status TINYINT(1) DEFAULT 0, data JSON, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
+  `INSERT IGNORE INTO settings (id) VALUES ('main')`,
+];
+
 async function connectMySQL(): Promise<void> {
   if (mysqlPool) return;
   const uri = getDbUri();
@@ -192,14 +213,26 @@ async function connectMySQL(): Promise<void> {
       host: url.hostname,
       port: parseInt(url.port || "3306"),
       user: url.username,
-      password: url.password,
+      password: decodeURIComponent(url.password),
       database: url.pathname.slice(1),
       waitForConnections: true,
       connectionLimit: 10,
+      charset: "utf8mb4",
     });
-    console.log("✅ MySQL connected:", url.hostname);
+
+    // Create all tables on first connect
+    const conn = await mysqlPool.getConnection();
+    try {
+      for (const sql of MYSQL_SCHEMA) {
+        await conn.execute(sql);
+      }
+      console.log("✅ MySQL connected:", url.hostname, "— all tables ready");
+    } finally {
+      conn.release();
+    }
   } catch (err) {
-    throw new Error(`MySQL connection failed: ${(err as Error).message}`);
+    mysqlPool = null;
+    throw new Error(`MySQL connection failed: ${(err as Error).message}. Make sure mysql2 is installed: npm install mysql2`);
   }
 }
 

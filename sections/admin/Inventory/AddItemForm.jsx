@@ -48,6 +48,10 @@ const AddItemForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (imageEntries.length < 2) {
+      toast.error("Please upload at least 2 product images. The second image is shown on hover.");
+      return;
+    }
     setLoading(true);
     try {
       const fd = new FormData();
@@ -152,7 +156,9 @@ const AddItemForm = () => {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-heading">
-              Product Images <span className="text-muted-text font-normal">({imageEntries.length} selected)</span>
+              Product Images
+              <span className="text-error ml-1 text-xs font-normal">(min. 2 required — 2nd shown on hover)</span>
+              <span className="text-muted-text ml-1 font-normal">({imageEntries.length} selected)</span>
             </label>
             <button type="button" onClick={() => fileInputRef.current?.click()}
               className="text-xs text-primary hover:text-primary-hover font-medium transition-colors flex items-center gap-1">
@@ -179,6 +185,11 @@ const AddItemForm = () => {
                       Main
                     </span>
                   )}
+                  {i === 1 && (
+                    <span className="absolute bottom-0 left-0 right-0 bg-secondary/80 text-white text-[9px] text-center py-0.5 rounded-b-md">
+                      Hover
+                    </span>
+                  )}
                 </div>
               ))}
               {/* Add more tile */}
@@ -199,7 +210,7 @@ const AddItemForm = () => {
                 </svg>
               </div>
               <p className="text-sm text-body-text"><span className="text-primary font-medium">Click to upload</span> or drag and drop</p>
-              <p className="text-xs text-muted-text mt-1">PNG, JPG, WebP — multiple allowed (max 5MB each)</p>
+              <p className="text-xs text-muted-text mt-1">PNG, JPG, WebP — minimum 2 images required. 1st = main, 2nd = shown on hover.</p>
             </div>
           )}
 

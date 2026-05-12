@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Product";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { uploadMedia } from "@/lib/mediaUpload";
 
 function requireAdmin(session: { user?: { role?: string } } | null) {
   if (!session?.user) return "Unauthorized";
@@ -55,21 +54,13 @@ export async function POST(req: NextRequest) {
     if (existing) {
       slug = `${slug}-${Date.now()}`;
     }
-    // Handle image uploads
+    // Handle image uploads using the configured media provider
     const imagePaths: string[] = [];
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
-
     const imageFiles = formData.getAll("images") as File[];
     for (const file of imageFiles) {
       if (file && file.size > 0) {
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const ext = file.name.split(".").pop() ?? "jpg";
-        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const filePath = path.join(uploadDir, filename);
-        await writeFile(filePath, buffer);
-        imagePaths.push(`/uploads/${filename}`);
+        const url = await uploadMedia(file, "products");
+        imagePaths.push(url);
       }
     }
 

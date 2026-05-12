@@ -8,6 +8,7 @@ const TABS = [
   { id: "payment", label: "Payment" },
   { id: "shipping", label: "Shipping" },
   { id: "policy", label: "Policies" },
+  { id: "media", label: "Media Storage" },
   { id: "notifications", label: "Notifications" },
   { id: "database", label: "Database" },
 ];
@@ -98,9 +99,13 @@ export default function AdminSettings() {
         "returnPolicy", "privacyPolicy", "termsConditions", "aboutText",
         "instaMojoApiKey", "instaMojoAuthToken", "instaMojoSalt",
         "qrRecipientName", "qrUpiId", "cashfreeAppId", "cashfreeSecretKey", "cashfreeEnv", "paymentGateway",
+        "mediaStorage",
+        "backblazeBucketName", "backblazeRegion", "backblazeAccessKeyId", "backblazeSecretKey", "backblazePublicUrl",
+        "r2BucketName", "r2AccessKeyId", "r2SecretAccessKey", "r2Endpoint", "r2PublicUrl",
       ];
+      // Always send all text fields (even empty string) so they get saved/cleared
       for (const f of textFields) {
-        if (settings[f] != null) fd.append(f, settings[f]);
+        fd.append(f, settings[f] ?? "");
       }
 
       fd.append("codEnabled", String(settings.codEnabled ?? true));
@@ -478,6 +483,11 @@ export default function AdminSettings() {
           </div>
         )}
 
+        {/* ── MEDIA STORAGE ── */}
+        {activeTab === "media" && (
+          <MediaStorageTab settings={settings} handleChange={handleChange} iCls={iCls} />
+        )}
+
         {/* ── NOTIFICATIONS ── */}
         {activeTab === "notifications" && (
           <NotificationsTab />
@@ -622,13 +632,22 @@ function ToggleRow({ label, desc, checked, onChange }) {
 
 // ─── Database Tab ─────────────────────────────────────────────────────────────
 function DatabaseTab() {
-  const [uri, setUri] = useState(process.env.NEXT_PUBLIC_APP_URL ? "" : "");
+  const [uri, setUri] = useState("");
   const [testing, setTesting] = useState(false);
-  const [status, setStatus] = useState(null); // null | "ok" | "error"
+  const [status, setStatus] = useState(null);
   const [msg, setMsg] = useState("");
   const [dbType, setDbType] = useState("mongodb");
+  const [currentDb, setCurrentDb] = useState(null);
 
   const iCls = "w-full px-4 py-3 border border-border rounded-md bg-body text-body-text placeholder:text-muted-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-shadow text-sm font-mono";
+
+  // Fetch current DB info from server
+  useEffect(() => {
+    fetch("/api/admin/db-info")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCurrentDb(d.data); })
+      .catch(() => {});
+  }, []);
 
   const testConnection = async () => {
     if (!uri.trim()) { setMsg("Enter a connection string first"); setStatus("error"); return; }
@@ -649,62 +668,35 @@ function DatabaseTab() {
     }
   };
 
+  const DB_ICONS = { mongodb: "🍃", mysql: "🐬", sqlite: "📁" };
+  const DB_LABELS = { mongodb: "MongoDB", mysql: "MySQL", sqlite: "SQLite" };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-sm font-bold text-heading mb-1">Database Configuration</h3>
-        <p className="text-xs text-muted-text">
-          Current database is set via <code className="bg-border px-1 rounded">MONGODB_URI</code> in <code className="bg-border px-1 rounded">.env.local</code>.
-          Use this panel to test a new connection string before updating your environment.
-        </p>
-      </div>
-
-      {/* DB Type */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { value: "mongodb", label: "🍃 MongoDB", desc: "Recommended for production" },
-          { value: "mysql",   label: "🐬 MySQL",   desc: "Popular relational DB" },
-          { value: "sqlite",  label: "📁 SQLite",  desc: "Local testing only" },
-        ].map((db) => (
-          <button key={db.value} type="button" onClick={() => { setDbType(db.value); setUri(""); setStatus(null); }}
-            className={`p-3 border-2 rounded-lg text-left transition-colors ${dbType === db.value ? "border-primary bg-section-2" : "border-border hover:border-heading"}`}>
-            <p className="font-semibold text-sm text-heading">{db.label}</p>
-            <p className="text-xs text-muted-text mt-0.5">{db.desc}</p>
-          </button>
-        ))}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-heading mb-2">Connection String</label>
-        <input type="text" value={uri} onChange={(e) => { setUri(e.target.value); setStatus(null); }}
-          placeholder={
-            dbType === "mongodb" ? "mongodb://localhost:27017/mystore" :
-            dbType === "mysql" ? "mysql://user:password@localhost:3306/mystore" :
-            "file:./dev.db"
-          }
-          className={iCls} />
-        <p className="text-xs text-muted-text mt-1">
-          {dbType === "mongodb" && "Format: mongodb://[user:pass@]host[:port]/database  or  mongodb+srv://..."}
-          {dbType === "mysql" && "Format: mysql://username:password@host:3306/database"}
-          {dbType === "sqlite" && "⚠️ SQLite is for local development only. Not recommended for production."}
-        </p>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <button onClick={testConnection} disabled={testing || !uri.trim()}
-          className="flex items-center gap-2 px-5 py-2.5 border border-primary text-primary rounded-md text-sm font-medium hover:bg-primary hover:text-white transition-colors disabled:opacity-50">
-          {testing ? <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Testing…</> : "Test Connection"}
-        </button>
-        {status === "ok" && <span className="text-success text-sm font-medium">✅ {msg}</span>}
-        {status === "error" && <span className="text-error text-sm">❌ {msg}</span>}
-      </div>
+      {/* Current active database */}
+      {currentDb && (
+        <div className={`border rounded-xl p-4 ${currentDb.type === "mongodb" ? "bg-green-50 border-green-200" : currentDb.type === "mysql" ? "bg-blue-50 border-blue-200" : "bg-yellow-50 border-yellow-200"}`}>
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">{DB_ICONS[currentDb.type] ?? "🗄️"}</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-heading text-sm">
+                Currently using: <span className="text-primary">{DB_LABELS[currentDb.type] ?? currentDb.type}</span>
+              </p>
+              <p className="text-xs text-muted-text mt-1 font-mono truncate">{currentDb.uri}</p>
+              <p className="text-xs text-success font-medium mt-1">Connected</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-body border border-border rounded-lg p-4 text-sm space-y-2">
         <p className="font-medium text-heading text-xs uppercase tracking-widest">To change your database:</p>
         <ol className="list-decimal list-inside space-y-1 text-body-text text-xs">
-          <li>Test the connection string above</li>
-          <li>Update <code className="bg-border px-1 rounded">MONGODB_URI</code> in your <code className="bg-border px-1 rounded">.env.local</code> file</li>
-          <li>Restart the development server</li>
+          <li>Update <code className="bg-border px-1 rounded">MONGODB_URI</code> in your <code className="bg-border px-1 rounded">.env.local</code> file with the new connection string</li>
+          <li>Restart the development server (<code className="bg-border px-1 rounded">npm run dev</code>)</li>
+          <li>For SQLite: use <code className="bg-border px-1 rounded">file:./ht.db</code></li>
+          <li>For MySQL: use <code className="bg-border px-1 rounded">mysql://user:pass@host:3306/db</code></li>
+          <li>For MongoDB Atlas: use <code className="bg-border px-1 rounded">mongodb+srv://user:pass@cluster.mongodb.net/db</code></li>
         </ol>
       </div>
     </div>
@@ -867,6 +859,216 @@ function NotificationsTab() {
           {saving ? "Saving…" : "Save Notification Settings"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Media Storage Tab ────────────────────────────────────────────────────────
+function MediaStorageTab({ settings, handleChange, iCls }) {
+  const provider = settings?.mediaStorage ?? "local";
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/admin/media/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          backblazeBucketName: settings?.backblazeBucketName,
+          backblazeRegion: settings?.backblazeRegion,
+          backblazeAccessKeyId: settings?.backblazeAccessKeyId,
+          backblazeSecretKey: settings?.backblazeSecretKey,
+          backblazePublicUrl: settings?.backblazePublicUrl,
+          r2BucketName: settings?.r2BucketName,
+          r2AccessKeyId: settings?.r2AccessKeyId,
+          r2SecretAccessKey: settings?.r2SecretAccessKey,
+          r2Endpoint: settings?.r2Endpoint,
+          r2PublicUrl: settings?.r2PublicUrl,
+        }),
+      });
+      const d = await res.json();
+      setTestResult({ ok: d.success, msg: d.message });
+    } catch {
+      setTestResult({ ok: false, msg: "Network error" });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const Spinner = () => (
+    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+    </svg>
+  );
+
+  const FieldHint = ({ children }) => (
+    <p className="text-xs text-muted-text mt-1 leading-relaxed">{children}</p>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-sm font-bold text-heading mb-1">Media Storage Provider</p>
+        <p className="text-xs text-muted-text">Choose where uploaded images (products, logos, QR codes) are stored.</p>
+      </div>
+
+      {/* Provider selector */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[
+          { value: "local", label: "Local Storage", desc: "Stored on your server. Good for development only.", color: "text-gray-600" },
+          { value: "backblaze", label: "Backblaze B2", desc: "Affordable cloud storage. $0.006/GB/month.", color: "text-orange-600" },
+          { value: "r2", label: "Cloudflare R2", desc: "Zero egress fees. Fast global CDN.", color: "text-blue-600" },
+        ].map((p) => (
+          <button key={p.value} type="button" onClick={() => { handleChange("mediaStorage", p.value); setTestResult(null); }}
+            className={`p-4 border-2 rounded-xl text-left transition-all ${provider === p.value ? "border-primary bg-section-2 shadow-sm" : "border-border hover:border-heading"}`}>
+            <p className={`font-semibold text-sm ${provider === p.value ? "text-primary" : "text-heading"}`}>{p.label}</p>
+            <p className="text-xs text-muted-text mt-1 leading-relaxed">{p.desc}</p>
+            {provider === p.value && <p className="text-xs text-primary font-semibold mt-2">Active</p>}
+          </button>
+        ))}
+      </div>
+
+      {/* Local */}
+      {provider === "local" && (
+        <div className="bg-body border border-border rounded-lg p-4 space-y-2">
+          <p className="font-medium text-heading text-sm">Local Storage is active</p>
+          <p className="text-xs text-body-text">Files are saved to <code className="bg-border px-1 rounded">/public/uploads/</code> on your server.</p>
+          <p className="text-xs text-warning font-medium">Not recommended for production — files are lost on server restart/redeploy. Use Backblaze or R2 for production.</p>
+        </div>
+      )}
+
+      {/* Backblaze B2 */}
+      {provider === "backblaze" && (
+        <div className="space-y-5">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-xs text-orange-800 space-y-1">
+            <p className="font-semibold">How to get Backblaze B2 credentials:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Go to <a href="https://www.backblaze.com" target="_blank" rel="noopener noreferrer" className="underline">backblaze.com</a> → Sign in → B2 Cloud Storage</li>
+              <li>Click <strong>Create a Bucket</strong> — note the Bucket Name and Region</li>
+              <li>Go to <strong>App Keys</strong> → <strong>Add a New Application Key</strong></li>
+              <li>Set permissions to <strong>Read and Write</strong> for your bucket</li>
+              <li>Copy the <strong>keyID</strong> (Access Key ID) and <strong>applicationKey</strong> (Secret)</li>
+            </ol>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Bucket Name</label>
+            <input type="text" value={settings?.backblazeBucketName ?? ""} onChange={(e) => handleChange("backblazeBucketName", e.target.value)}
+              className={iCls} placeholder="my-store-bucket" autoComplete="off" />
+            <FieldHint>The name of your B2 bucket. Found in B2 Cloud Storage → Buckets.</FieldHint>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Bucket Region</label>
+            <select value={settings?.backblazeRegion ?? ""} onChange={(e) => handleChange("backblazeRegion", e.target.value)}
+              className={`${iCls} appearance-none cursor-pointer`}>
+              <option value="">Select region</option>
+              <option value="us-west-004">us-west-004 (US West)</option>
+              <option value="us-east-005">us-east-005 (US East)</option>
+              <option value="eu-central-003">eu-central-003 (EU Central)</option>
+              <option value="ap-southeast-001">ap-southeast-001 (Asia Pacific)</option>
+            </select>
+            <FieldHint>Your bucket region. Found in B2 Cloud Storage → Buckets → Bucket Details.</FieldHint>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Access Key ID</label>
+            <input type="text" value={settings?.backblazeAccessKeyId ?? ""} onChange={(e) => handleChange("backblazeAccessKeyId", e.target.value)}
+              className={iCls} placeholder="0030d68d280149a0000000003" autoComplete="off" />
+            <FieldHint>The <strong>keyID</strong> from your Backblaze Application Key. Found in App Keys section.</FieldHint>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Access Key Secret</label>
+            <input type="password" value={settings?.backblazeSecretKey ?? ""} onChange={(e) => handleChange("backblazeSecretKey", e.target.value)}
+              className={iCls} placeholder="K003l8noNMpjh6VutRJ7oZJ0x5vLDpU" autoComplete="off" />
+            <FieldHint>The <strong>applicationKey</strong> shown once when you create the key. Store it safely.</FieldHint>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Public URL (optional)</label>
+            <input type="url" value={settings?.backblazePublicUrl ?? ""} onChange={(e) => handleChange("backblazePublicUrl", e.target.value)}
+              className={iCls} placeholder="https://f000.backblazeb2.com/file/my-store-bucket" />
+            <FieldHint>Leave blank to auto-generate. Or use a custom CDN domain. Format: <code className="bg-border px-1 rounded">https://f000.backblazeb2.com/file/BUCKET_NAME</code></FieldHint>
+          </div>
+        </div>
+      )}
+
+      {/* Cloudflare R2 */}
+      {provider === "r2" && (
+        <div className="space-y-5">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-xs text-blue-800 space-y-1">
+            <p className="font-semibold">How to get Cloudflare R2 credentials:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Go to <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" className="underline">dash.cloudflare.com</a> → R2 Object Storage</li>
+              <li>Click <strong>Create bucket</strong> — note the Bucket Name</li>
+              <li>Go to <strong>Manage R2 API Tokens</strong> → <strong>Create API Token</strong></li>
+              <li>Set permissions to <strong>Object Read & Write</strong></li>
+              <li>Copy the <strong>Access Key ID</strong>, <strong>Secret Access Key</strong>, and <strong>Endpoint</strong></li>
+              <li>Enable <strong>Public Access</strong> on the bucket to get a Public URL</li>
+            </ol>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Bucket Name</label>
+            <input type="text" value={settings?.r2BucketName ?? ""} onChange={(e) => handleChange("r2BucketName", e.target.value)}
+              className={iCls} placeholder="my-store-bucket" autoComplete="off" />
+            <FieldHint>The name of your R2 bucket. Found in R2 → Buckets.</FieldHint>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Access Key ID</label>
+            <input type="text" value={settings?.r2AccessKeyId ?? ""} onChange={(e) => handleChange("r2AccessKeyId", e.target.value)}
+              className={iCls} placeholder="e0f052af5f2f71022f78e18cc186421f" autoComplete="off" />
+            <FieldHint>Found in R2 → Manage R2 API Tokens → your token's <strong>Access Key ID</strong>.</FieldHint>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Access Key Secret</label>
+            <input type="password" value={settings?.r2SecretAccessKey ?? ""} onChange={(e) => handleChange("r2SecretAccessKey", e.target.value)}
+              className={iCls} placeholder="3aef0769f46faafd61f7fe53d2bd283e..." autoComplete="off" />
+            <FieldHint>The <strong>Secret Access Key</strong> shown once when you create the API token.</FieldHint>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Endpoint</label>
+            <input type="url" value={settings?.r2Endpoint ?? ""} onChange={(e) => handleChange("r2Endpoint", e.target.value)}
+              className={iCls} placeholder="https://fd0f7ca7e5991f7ccd4d52d1ebcec6e8.r2.cloudflarestorage.com" autoComplete="off" />
+            <FieldHint>Found in R2 → Manage R2 API Tokens → <strong>Endpoint</strong>. Format: <code className="bg-border px-1 rounded">https://ACCOUNT_ID.r2.cloudflarestorage.com</code></FieldHint>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-heading mb-1">Custom Domain / Public URL</label>
+            <input type="url" value={settings?.r2PublicUrl ?? ""} onChange={(e) => handleChange("r2PublicUrl", e.target.value)}
+              className={iCls} placeholder="https://pub-90bf958bd7444656b18400680f35b8cd.r2.dev" />
+            <FieldHint>Found in R2 → your bucket → <strong>Public Access</strong> → Enable → copy the URL. Or use your own domain.</FieldHint>
+          </div>
+        </div>
+      )}
+
+      {/* Test + Save buttons */}
+      {provider !== "local" && (
+        <div className="flex items-center gap-3 pt-2 border-t border-border flex-wrap">
+          <button onClick={handleTest} disabled={testing}
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50">
+            {testing ? <><Spinner /> Testing…</> : (
+              <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg> Test Connection</>
+            )}
+          </button>
+          {testResult && (
+            <span className={`text-sm font-medium ${testResult.ok ? "text-success" : "text-error"}`}>
+              {testResult.ok ? "✓" : "✗"} {testResult.msg}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

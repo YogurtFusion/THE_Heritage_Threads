@@ -1,20 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getAllSettings, updateSettings } from "@/lib/db";
-import dbConnect from "@/lib/dbConnect";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-
-async function saveUploadedFile(file: File, subfolder: string): Promise<string> {
-  const uploadDir = path.join(process.cwd(), "public", "uploads", subfolder);
-  await mkdir(uploadDir, { recursive: true });
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-  const ext = file.name.split(".").pop() ?? "png";
-  const filename = `${subfolder}-${Date.now()}.${ext}`;
-  await writeFile(path.join(uploadDir, filename), buffer);
-  return `/uploads/${subfolder}/${filename}`;
-}
+import { uploadMedia } from "@/lib/mediaUpload";
 
 export async function GET(_req: NextRequest) {
   try {
@@ -52,8 +39,6 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    await dbConnect();
-
     const contentType = req.headers.get("content-type") ?? "";
     let updates: Record<string, unknown> = {};
 
@@ -66,6 +51,9 @@ export async function PUT(req: NextRequest) {
         "instaMojoApiKey", "instaMojoAuthToken", "instaMojoSalt",
         "cashfreeAppId", "cashfreeSecretKey", "cashfreeEnv", "paymentGateway",
         "qrRecipientName", "qrUpiId",
+        "mediaStorage",
+        "backblazeBucketName", "backblazeRegion", "backblazeAccessKeyId", "backblazeSecretKey", "backblazePublicUrl",
+        "r2BucketName", "r2AccessKeyId", "r2SecretAccessKey", "r2Endpoint", "r2PublicUrl",
       ];
       for (const field of textFields) {
         const val = formData.get(field);
@@ -93,19 +81,19 @@ export async function PUT(req: NextRequest) {
       if (Object.keys(socialLinks).length > 0) updates["socialLinks"] = socialLinks;
 
       const logoFile = formData.get("logo") as File | null;
-      if (logoFile && logoFile.size > 0) updates.logo = await saveUploadedFile(logoFile, "settings");
+      if (logoFile && logoFile.size > 0) updates.logo = await uploadMedia(logoFile, "settings");
       else if (formData.get("removeLogo") === "true") updates.logo = null;
 
       const bannerFile = formData.get("banner") as File | null;
-      if (bannerFile && bannerFile.size > 0) updates.banner = await saveUploadedFile(bannerFile, "settings");
+      if (bannerFile && bannerFile.size > 0) updates.banner = await uploadMedia(bannerFile, "settings");
       else if (formData.get("removeBanner") === "true") updates.banner = null;
 
       const faviconFile = formData.get("favicon") as File | null;
-      if (faviconFile && faviconFile.size > 0) updates.favicon = await saveUploadedFile(faviconFile, "settings");
+      if (faviconFile && faviconFile.size > 0) updates.favicon = await uploadMedia(faviconFile, "settings");
       else if (formData.get("removeFavicon") === "true") updates.favicon = null;
 
       const qrFile = formData.get("qrImage") as File | null;
-      if (qrFile && qrFile.size > 0) updates.qrImage = await saveUploadedFile(qrFile, "settings");
+      if (qrFile && qrFile.size > 0) updates.qrImage = await uploadMedia(qrFile, "settings");
       else if (formData.get("removeQrImage") === "true") updates.qrImage = null;
     } else {
       updates = await req.json();

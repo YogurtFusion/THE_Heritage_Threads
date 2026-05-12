@@ -58,6 +58,7 @@ const Footer = () => {
     { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
     { name: "Policies", href: "/policy" },
+    { name: "Help", href: "/docs" },
   ];
 
   // Only show social links that have a URL set

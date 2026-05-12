@@ -90,9 +90,17 @@ export async function getAllSettings() {
       returnPolicy: row.return_policy, privacyPolicy: row.privacy_policy,
       termsConditions: row.terms_conditions, aboutText: row.about_text,
       setupComplete: Boolean(row.setup_complete),
+      // Media storage
+      mediaStorage: row.media_storage || "local",
+      backblazeBucketName: row.backblaze_bucket_name, backblazeRegion: row.backblaze_region,
+      backblazeAccessKeyId: row.backblaze_access_key_id, backblazeSecretKey: row.backblaze_secret_key,
+      backblazePublicUrl: row.backblaze_public_url,
+      r2BucketName: row.r2_bucket_name, r2AccessKeyId: row.r2_access_key_id,
+      r2SecretAccessKey: row.r2_secret_access_key, r2Endpoint: row.r2_endpoint, r2PublicUrl: row.r2_public_url,
     };
   }
   const Settings = (await import("@/models/Settings")).default;
+  // Use lean() — returns all fields including new media storage fields
   return Settings.findOne({}).lean();
 }
 
@@ -112,6 +120,13 @@ export async function updateSettings(updates: Record<string, unknown>) {
       cashfreeSecretKey: "cashfree_secret_key", cashfreeEnv: "cashfree_env",
       returnPolicy: "return_policy", privacyPolicy: "privacy_policy",
       termsConditions: "terms_conditions", aboutText: "about_text",
+      // Media storage
+      mediaStorage: "media_storage",
+      backblazeBucketName: "backblaze_bucket_name", backblazeRegion: "backblaze_region",
+      backblazeAccessKeyId: "backblaze_access_key_id", backblazeSecretKey: "backblaze_secret_key",
+      backblazePublicUrl: "backblaze_public_url",
+      r2BucketName: "r2_bucket_name", r2AccessKeyId: "r2_access_key_id",
+      r2SecretAccessKey: "r2_secret_access_key", r2Endpoint: "r2_endpoint", r2PublicUrl: "r2_public_url",
     };
     const setClauses: string[] = [];
     const values: unknown[] = [];
@@ -246,9 +261,13 @@ export async function createOrder(data: {
   }
   const Order = (await import("@/models/Order")).default;
   return Order.create({
-    userId: data.userId, items: data.items, totalAmount: data.totalAmount,
-    shippingAddress: data.shippingAddress, paymentId: data.paymentId ?? null,
-    paymentStatus: data.paymentStatus ?? "pending", status: "pending",
+    userId: data.userId,
+    items: data.items,
+    totalAmount: data.totalAmount,
+    shippingAddress: data.shippingAddress,
+    paymentId: data.paymentId ?? null,
+    paymentStatus: (data.paymentStatus ?? "pending") as "pending" | "paid" | "failed" | "refunded",
+    status: "pending" as const,
   });
 }
 
@@ -298,8 +317,15 @@ export async function verifyOrderPayment(id: string, action: "verify" | "decline
   const Order = (await import("@/models/Order")).default;
   const order = await Order.findById(id);
   if (!order) return null;
-  if (action === "verify") { order.paymentStatus = "paid"; order.status = "processing"; }
-  else { order.paymentStatus = "pending"; (order as Record<string, unknown>).paymentMethod = "cod"; order.paymentScreenshot = undefined; order.status = "pending"; }
+  if (action === "verify") {
+    order.paymentStatus = "paid";
+    order.status = "processing";
+  } else {
+    order.paymentStatus = "pending";
+    order.paymentMethod = "cod" as "cod" | "online" | "qr";
+    order.paymentScreenshot = undefined;
+    order.status = "pending";
+  }
   await order.save();
   return order;
 }
@@ -363,7 +389,12 @@ export async function createUser(data: { name: string; email: string; password: 
     return { _id: id, name: data.name, email: data.email, role: data.role ?? "user" };
   }
   const User = (await import("@/models/User")).default;
-  return User.create(data);
+  return User.create({
+    name: data.name,
+    email: data.email,
+    password: data.password,
+    role: (data.role ?? "user") as "admin" | "user",
+  });
 }
 
 export async function updateUserProfile(userId: string, name: string) {
@@ -455,7 +486,13 @@ export async function createNotificationRecord(data: {
     return true;
   }
   const Notification = (await import("@/models/Notification")).default;
-  await Notification.create(data);
+  await Notification.create({
+    type: data.type as "new_order" | "order_updated" | "new_contact" | "low_stock" | "new_user" | "payment_receipt",
+    title: data.title,
+    message: data.message,
+    link: data.link,
+    data: data.data,
+  });
   return true;
 }
 

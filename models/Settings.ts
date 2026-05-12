@@ -46,6 +46,20 @@ export interface ISettings extends Document {
   privacyPolicy?: string;
   termsConditions?: string;
   aboutText?: string;
+  // Media Storage
+  mediaStorage?: "local" | "backblaze" | "r2";
+  // Backblaze B2 (S3-compatible)
+  backblazeBucketName?: string;
+  backblazeRegion?: string;
+  backblazeAccessKeyId?: string;
+  backblazeSecretKey?: string;
+  backblazePublicUrl?: string;
+  // Cloudflare R2
+  r2BucketName?: string;
+  r2AccessKeyId?: string;
+  r2SecretAccessKey?: string;
+  r2Endpoint?: string;
+  r2PublicUrl?: string;
   // Setup
   setupComplete: boolean;
 }
@@ -93,6 +107,20 @@ const SettingsSchema = new Schema<ISettings>(
     privacyPolicy: { type: String, default: "" },
     termsConditions: { type: String, default: "" },
     aboutText: { type: String, default: "" },
+    // Media Storage
+    mediaStorage: { type: String, enum: ["local", "backblaze", "r2"], default: "local" },
+    // Backblaze B2 (S3-compatible)
+    backblazeBucketName: { type: String, default: null },
+    backblazeRegion: { type: String, default: null },
+    backblazeAccessKeyId: { type: String, default: null },
+    backblazeSecretKey: { type: String, default: null },
+    backblazePublicUrl: { type: String, default: null },
+    // Cloudflare R2
+    r2BucketName: { type: String, default: null },
+    r2AccessKeyId: { type: String, default: null },
+    r2SecretAccessKey: { type: String, default: null },
+    r2Endpoint: { type: String, default: null },
+    r2PublicUrl: { type: String, default: null },
     // Setup
     setupComplete: { type: Boolean, default: false },
   },

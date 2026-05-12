@@ -20,6 +20,25 @@ export async function POST(req: NextRequest) {
     const userId = (session.user as { userId?: string }).userId ?? "";
     const order = await createOrder({ userId, items, totalAmount, shippingAddress, paymentId, paymentStatus, paymentMethod });
 
+    // Reduce stock for each ordered item
+    try {
+      const { detectDbType, getDbUri, sqliteDb } = await import("@/lib/dbConnect");
+      const dbType = detectDbType(getDbUri());
+      if (dbType === "sqlite") {
+        const db = sqliteDb!;
+        for (const item of items as { productId: string; qty: number }[]) {
+          db.prepare("UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?").run(item.qty, item.productId);
+        }
+      } else {
+        const Product = (await import("@/models/Product")).default;
+        for (const item of items as { productId: string; qty: number }[]) {
+          await Product.findByIdAndUpdate(item.productId, { $inc: { stock: -item.qty } });
+        }
+      }
+    } catch (stockErr) {
+      console.error("Stock reduction error (non-fatal):", stockErr);
+    }
+
     const userEmail = session.user.email ?? "";
     const siteName = process.env.SITE_NAME ?? "Heritage Threads";
     const computedSubtotal = subtotal ?? items.reduce((s: number, i: { price: number; qty: number }) => s + i.price * i.qty, 0);
