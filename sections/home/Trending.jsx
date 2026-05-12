@@ -1,12 +1,19 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import SlideCard from "../../components/ui/SlideCards";
 import { Trendingdata } from "@/data/product";
 import MainBtn from "../../components/ui/HomeBtn";
+import { motion } from "framer-motion";
+import ArrowLeft from "@/components/Icons/ArrowLeft";
+import ArrowRight from "@/components/Icons/ArrowRight";
 
 const Trending = () => {
+  const scrollRef = useRef(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(0);
+  const [canScrollRight, seCanScrollRight] = useState(0);
 
   useEffect(() => {
     fetch("/api/products?trending=true&limit=9")
@@ -24,6 +31,32 @@ const Trending = () => {
   }, []);
 
   const items = loading ? Trendingdata : products;
+
+  useEffect(()=>{
+    handleScroll()
+  },[items])
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmout = 400;
+      scrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmout : scrollAmout,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      const maxScroll = scrollWidth - clientWidth;
+      const progress = maxScroll > 0 ? (scrollLeft / maxScroll) * 100 : 0;
+      setScrollProgress(progress);
+
+      setCanScrollLeft(scrollLeft>0)
+      seCanScrollRight(Math.ceil(scrollLeft)<Math.floor(maxScroll))
+    }
+  };
 
   return (
     <section className="bg-body">
@@ -46,9 +79,23 @@ const Trending = () => {
           </div>
         </div>
 
-        <div className="flex gap-8 overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 lg:px-12 scroll-px-6 lg:scroll-px-12">
-          {items.map((item) => (
-            <div key={item._id ?? item.id} className="min-w-[80vw] md:min-w-[40vw] lg:min-w-[25vw]">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex gap-8 overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 lg:px-12 scroll-px-6 lg:scroll-px-12"
+        >
+          {items.map((item, index) => (
+            <motion.div
+              key={item._id ?? item.id}
+              className="min-w-[80vw] md:min-w-[40vw] lg:min-w-[25vw]"
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{
+                duration: 0.6,
+                delay: index * 0.1,
+              }}
+            >
               <SlideCard
                 id={item._id ?? item.id}
                 _id={item._id}
@@ -58,9 +105,35 @@ const Trending = () => {
                 subhead={item.subhead ?? item.description}
                 price={item.price}
               />
-            </div>
+            </motion.div>
           ))}
-          <div className="min-w-px h-1" aria-hidden="true" />
+        </div>
+
+        <div className=" px-6 lg:px-12 mt-10  flex items-center justify-between gap-6">
+          <div className="flex-1 h-0.5 w-full bg-border relative rounded-full  overflow-hidden">
+            <div
+              className="absolute top-0 left-0 h-full bg-heading transition-all duration-150 ease-out"
+              style={{ width: `${scrollProgress}%` }}
+            ></div>
+          </div>
+
+          <div className="hidden md:flex items-center  shrink-0 gap-4  ">
+            <button
+            onClick={() => scroll("left")}
+            disabled={!canScrollLeft}
+              className={`flex w-10 h-10 items-center justify-center    border rounded-full duration-300 transition-colors ${canScrollLeft ?"bg-body border-heading text-heading hover:bg-heading hover:text-body":" border-border text-muted-text cursor-not-allowed opacity-50"} `}
+            >
+              <ArrowLeft />
+            </button>
+
+            <button
+            disabled={!canScrollRight}
+              onClick={() => scroll("right")}
+              className={`flex w-10 h-10 items-center justify-center border  rounded-full duration-300 transition-colors  ${canScrollRight?"bg-body hover:bg-heading hover:text-body  text-heading border-heading":" border-border text-muted-text cursor-not-allowed opacity-50"} `}
+            >
+              <ArrowRight />
+            </button>
+          </div>
         </div>
       </div>
     </section>
