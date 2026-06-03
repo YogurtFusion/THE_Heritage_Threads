@@ -6,7 +6,7 @@ import MainBtn from "../../components/ui/HomeBtn";
 
 const Hero = () => {
   return (
-    <section className=" relative  h-screen md:min-h-screen w-full  overflow-hidden bg-body shrink-0">
+    <section className=" relative  h-screen md:min-h-screen lg:h-fit w-full  overflow-hidden bg-body shrink-0">
       {/* wrap */}
       <div className=" relative flex flex-col lg:flex-row  justify-between items-center gap-6  w-full h-full  ">
         {/* img */}
