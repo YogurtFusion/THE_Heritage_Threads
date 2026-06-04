@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import HeroImg from "@/public/assets/hero/hero.png";
+import HeroImg from "@/public/assets/hero/hero.jpeg";
 import MobileImg from "@/public/assets/hero/mobile.png";
 import MainBtn from "../../components/ui/HomeBtn";
 
